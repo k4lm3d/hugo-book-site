@@ -1,0 +1,51 @@
+name: Setup Hugo Site
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  setup-hugo-site:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: latest
+          extended: true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create Hugo site
+        run: |
+          if [ ! -f "hugo.toml" ] && [ ! -f "config.toml" ]; then
+            hugo new site temp-site
+
+            cp -r temp-site/* .
+            cp -r temp-site/.[!.]* . 2>/dev/null || true
+
+            rm -rf temp-site
+          fi
+
+      - name: Commit and push
+        run: |
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes detected"
+            exit 0
+          fi
+
+          git commit -m "Initialize Hugo site"
+          git push origin HEAD:${GITHUB_REF_NAME}
