@@ -1,0 +1,53 @@
+name: Add Hugo Book Theme Submodule
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-hugo-book:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Hugo Book submodule
+        run: |
+          mkdir -p themes
+
+          if [ ! -d themes/hugo-book ]; then
+            git submodule add https://github.com/alex-shpak/hugo-book.git themes/hugo-book
+          else
+            echo "Hugo Book theme already exists."
+          fi
+
+      - name: Configure Hugo theme
+        run: |
+          if [ -f hugo.toml ]; then
+            if ! grep -q '^theme = "hugo-book"' hugo.toml; then
+              echo "" >> hugo.toml
+              echo 'theme = "hugo-book"' >> hugo.toml
+            fi
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git add .gitmodules themes/hugo-book hugo.toml
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Add Hugo Book theme"
+          git push origin HEAD:${GITHUB_REF_NAME}
